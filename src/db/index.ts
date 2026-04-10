@@ -322,6 +322,30 @@ if (!hasPhotos) {
   `);
 }
 
+// Migration for forum
+const hasForum = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='forum_posts'").get();
+if (!hasForum) {
+  db.exec(`
+    CREATE TABLE forum_posts (
+      id TEXT PRIMARY KEY,
+      project_id TEXT REFERENCES projects(id),
+      user_id TEXT,
+      user_name TEXT,
+      title TEXT,
+      content TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE forum_replies (
+      id TEXT PRIMARY KEY,
+      post_id TEXT REFERENCES forum_posts(id),
+      user_id TEXT,
+      user_name TEXT,
+      content TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
+
 // Migration for drawings
 const hasDrawings = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='drawing_sets'").get();
 if (!hasDrawings) {

@@ -22,6 +22,7 @@ import Warranty from './pages/Warranty';
 import Schedule from './pages/Schedule';
 import Procurement from './pages/Procurement';
 import Incidents from './pages/Incidents';
+import Forum from './pages/Forum';
 import { hasPermission } from './lib/permissions';
 
 /**
@@ -142,6 +143,9 @@ export default function App() {
               } />
               <Route path="/projects/:projectId/incidents" element={
                 hasPermission(user, 'incidents', 'VIEWER') ? <Incidents user={user} /> : <Navigate to="/" replace />
+              } />
+              <Route path="/projects/:projectId/forum" element={
+                hasPermission(user, 'forum', 'VIEWER') ? <Forum user={user} /> : <Navigate to="/" replace />
               } />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

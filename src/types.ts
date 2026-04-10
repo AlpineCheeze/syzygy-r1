@@ -29,6 +29,7 @@ export interface ToolPermissions {
   procurement: PermissionLevel;
   incidents: PermissionLevel;
   directory: PermissionLevel;
+  forum: PermissionLevel;
 }
 
 // ==========================================
@@ -225,4 +226,24 @@ export interface Submittal {
   description: string;
   assigned_company: string;
   target_due_date: string;
+}
+
+export interface ForumPost {
+  id: string;
+  project_id: string;
+  user_id: string;
+  user_name: string;
+  title: string;
+  content: string;
+  created_at: string;
+  reply_count?: number;
+}
+
+export interface ForumReply {
+  id: string;
+  post_id: string;
+  user_id: string;
+  user_name: string;
+  content: string;
+  created_at: string;
 }

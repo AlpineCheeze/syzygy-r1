@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Project, ToolPermissions } from '../types';
 import { Link, useParams } from 'react-router-dom';
-import { FileText, ClipboardCheck, Flag, ArrowLeft, Image as ImageIcon, PenTool, Users, Edit2, Check, X, ShieldCheck, MessageSquare, CalendarDays, Package, AlertTriangle } from 'lucide-react';
+import { FileText, ClipboardCheck, Flag, ArrowLeft, Image as ImageIcon, PenTool, Users, Edit2, Check, X, ShieldCheck, MessageSquare, CalendarDays, Package, AlertTriangle, MessageCircle } from 'lucide-react';
 import { hasPermission } from '../lib/permissions';
 
 /**
@@ -156,6 +156,15 @@ export default function ProjectDashboard({ user }: { user: User }) {
       description: 'Log and track safety incidents and reports.',
       icon: AlertTriangle,
       href: `/projects/${projectId}/incidents`,
+      color: 'text-wunder-dark',
+      bgColor: 'bg-wunder-lime'
+    },
+    {
+      key: 'forum' as keyof ToolPermissions,
+      name: 'Forum',
+      description: 'Project message board for posts, replies, and important notes.',
+      icon: MessageCircle,
+      href: `/projects/${projectId}/forum`,
       color: 'text-wunder-dark',
       bgColor: 'bg-wunder-lime'
     }

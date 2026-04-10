@@ -417,7 +417,7 @@ export default function Milestones({ user }: { user: User }) {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1 pr-8">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                             <p className={`text-sm font-medium ${deliv.status === 'APPROVED' ? 'text-wunder-gray line-through' : 'text-wunder-dark'}`}>
                               {deliv.description}
                             </p>
@@ -437,51 +437,6 @@ export default function Milestones({ user }: { user: User }) {
                         </div>
                       </div>
 
-                      {user.role === 'ADMIN' && (
-                        <div className="absolute top-4 right-4">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveDelivMenu(activeDelivMenu === deliv.id ? null : deliv.id);
-                            }}
-                            className="p-1 text-wunder-gray hover:text-wunder-dark hover:bg-wunder-bg rounded-md transition-all"
-                          >
-                            <MoreVertical className="h-5 w-5" />
-                          </button>
-                          
-                          {activeDelivMenu === deliv.id && (
-                            <>
-                              <div 
-                                className="fixed inset-0 z-10" 
-                                onClick={() => setActiveDelivMenu(null)}
-                              />
-                              <div className="absolute right-0 mt-1 w-32 bg-white border border-wunder-border rounded-lg shadow-lg z-20 py-1 overflow-hidden">
-                                <button 
-                                  onClick={() => {
-                                    setIsEditingDeliv(deliv);
-                                    setActiveDelivMenu(null);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-wunder-dark hover:bg-wunder-light transition-colors"
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                  Edit
-                                </button>
-                                <button 
-                                  onClick={() => {
-                                    handleDeleteDeliverable(deliv.id, milestone.id);
-                                    setActiveDelivMenu(null);
-                                  }}
-                                  className="w-full flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-500 hover:bg-red-50 transition-colors"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                  Delete
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
-                      
                       <div className="flex flex-wrap items-center gap-3 lg:justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-wunder-border">
                         {user.role === 'ADMIN' && (
                           <div className="flex items-center gap-3">
@@ -529,6 +484,51 @@ export default function Milestones({ user }: { user: User }) {
                               }}
                             />
                           </label>
+                        )}
+
+                        {user.role === 'ADMIN' && (
+                          <div className="relative">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveDelivMenu(activeDelivMenu === deliv.id ? null : deliv.id);
+                              }}
+                              className="p-2 text-wunder-gray hover:text-wunder-dark hover:bg-wunder-bg rounded-md transition-all"
+                            >
+                              <MoreVertical className="h-5 w-5" />
+                            </button>
+                            
+                            {activeDelivMenu === deliv.id && (
+                              <>
+                                <div 
+                                  className="fixed inset-0 z-10" 
+                                  onClick={() => setActiveDelivMenu(null)}
+                                />
+                                <div className="absolute right-0 mt-1 w-32 bg-white border border-wunder-border rounded-lg shadow-lg z-20 py-1 overflow-hidden">
+                                  <button 
+                                    onClick={() => {
+                                      setIsEditingDeliv(deliv);
+                                      setActiveDelivMenu(null);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-wunder-dark hover:bg-wunder-light transition-colors"
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                    Edit
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      handleDeleteDeliverable(deliv.id, milestone.id);
+                                      setActiveDelivMenu(null);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-500 hover:bg-red-50 transition-colors"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                    Delete
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     </li>

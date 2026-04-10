@@ -14,7 +14,8 @@ const DEFAULT_PERMISSIONS: ToolPermissions = {
   schedule: 'NONE',
   procurement: 'NONE',
   incidents: 'NONE',
-  directory: 'NONE'
+  directory: 'NONE',
+  forum: 'NONE'
 };
 
 const TOOLS: { key: keyof ToolPermissions; label: string }[] = [
@@ -29,6 +30,7 @@ const TOOLS: { key: keyof ToolPermissions; label: string }[] = [
   { key: 'procurement', label: 'Procurement' },
   { key: 'incidents', label: 'Incidents' },
   { key: 'directory', label: 'Directory' },
+  { key: 'forum', label: 'Forum' },
 ];
 
 export default function Directory({ user }: { user: User }) {

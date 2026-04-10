@@ -775,6 +775,48 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // --- Forum API ---
+  app.get('/api/projects/:projectId/forum/posts', (req, res) => {
+    const { projectId } = req.params;
+    const posts = db.prepare(`
+      SELECT p.*, (SELECT COUNT(*) FROM forum_replies r WHERE r.post_id = p.id) as reply_count
+      FROM forum_posts p
+      WHERE p.project_id = ?
+      ORDER BY p.created_at DESC
+    `).all(projectId);
+    res.json(posts);
+  });
+
+  app.post('/api/projects/:projectId/forum/posts', (req, res) => {
+    const { projectId } = req.params;
+    const { user_id, user_name, title, content } = req.body;
+    const id = crypto.randomUUID();
+    db.prepare(`
+      INSERT INTO forum_posts (id, project_id, user_id, user_name, title, content)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(id, projectId, user_id, user_name, title, content);
+    res.json({ id });
+  });
+
+  app.get('/api/forum/posts/:postId/replies', (req, res) => {
+    const { postId } = req.params;
+    const replies = db.prepare(`
+      SELECT * FROM forum_replies WHERE post_id = ? ORDER BY created_at ASC
+    `).all(postId);
+    res.json(replies);
+  });
+
+  app.post('/api/forum/posts/:postId/replies', (req, res) => {
+    const { postId } = req.params;
+    const { user_id, user_name, content } = req.body;
+    const id = crypto.randomUUID();
+    db.prepare(`
+      INSERT INTO forum_replies (id, post_id, user_id, user_name, content)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(id, postId, user_id, user_name, content);
+    res.json({ id });
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
