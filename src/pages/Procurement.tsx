@@ -8,7 +8,7 @@ export default function Procurement({ user }: { user: User }) {
   const { projectId } = useParams<{projectId: string}>();
   const [items, setItems] = useState<ProcurementItem[]>([]);
   const [isCreating, setIsCreating] = useState(false);
-  const [newItem, setNewItem] = useState({ item_name: '', expected_delivery_date: '', assigned_company: '' });
+  const [newItem, setNewItem] = useState({ item_name: '', expected_delivery_date: '', required_on_site_date: '', assigned_company: '' });
 
   const fetchItems = async () => {
     const url = user.role === 'ADMIN' 
@@ -32,7 +32,7 @@ export default function Procurement({ user }: { user: User }) {
 
     if (res.ok) {
       setIsCreating(false);
-      setNewItem({ item_name: '', expected_delivery_date: '', assigned_company: '' });
+      setNewItem({ item_name: '', expected_delivery_date: '', required_on_site_date: '', assigned_company: '' });
       fetchItems();
     }
   };
@@ -131,9 +131,12 @@ export default function Procurement({ user }: { user: User }) {
                 </div>
               </div>
               <div className="mt-2 sm:flex sm:justify-between">
-                <div className="sm:flex">
+                <div className="sm:flex flex-col gap-1">
                   <p className="flex items-center text-sm text-wunder-gray">
-                    Expected Delivery: {item.expected_delivery_date ? format(new Date(item.expected_delivery_date), 'MMM d, yyyy') : 'TBD'}
+                    Required on Site: <span className="ml-1 font-medium text-wunder-dark">{item.required_on_site_date ? format(new Date(item.required_on_site_date), 'MMM d, yyyy') : 'TBD'}</span>
+                  </p>
+                  <p className="flex items-center text-sm text-wunder-gray">
+                    Expected Delivery: <span className="ml-1 font-medium text-wunder-dark">{item.expected_delivery_date ? format(new Date(item.expected_delivery_date), 'MMM d, yyyy') : 'TBD'}</span>
                   </p>
                 </div>
                 <div className="mt-2 flex items-center text-sm text-wunder-gray sm:mt-0">
@@ -171,6 +174,16 @@ export default function Procurement({ user }: { user: User }) {
                         className="mt-1 block w-full border border-wunder-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-wunder-lime focus:border-wunder-lime sm:text-sm bg-wunder-light text-wunder-dark"
                         value={newItem.item_name}
                         onChange={e => setNewItem({...newItem, item_name: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-wunder-gray">Required on Site Date</label>
+                      <input
+                        type="date"
+                        required
+                        className="mt-1 block w-full border border-wunder-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-wunder-lime focus:border-wunder-lime sm:text-sm bg-wunder-light text-wunder-dark"
+                        value={newItem.required_on_site_date}
+                        onChange={e => setNewItem({...newItem, required_on_site_date: e.target.value})}
                       />
                     </div>
                     <div>

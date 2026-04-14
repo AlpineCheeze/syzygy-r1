@@ -197,6 +197,7 @@ export interface ProcurementItem {
   item_name: string;
   status: 'PENDING' | 'ORDERED' | 'IN_TRANSIT' | 'DELIVERED' | 'INSTALLED';
   expected_delivery_date: string;
+  required_on_site_date: string;
   assigned_company: string;
   created_at: string;
 }

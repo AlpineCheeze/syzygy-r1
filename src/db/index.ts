@@ -445,10 +445,17 @@ if (!hasProcurement) {
       item_name TEXT,
       status TEXT CHECK(status IN ('PENDING', 'ORDERED', 'IN_TRANSIT', 'DELIVERED', 'INSTALLED')) DEFAULT 'PENDING',
       expected_delivery_date TEXT,
+      required_on_site_date TEXT,
       assigned_company TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
   `);
+} else {
+  try {
+    db.exec(`ALTER TABLE procurement_items ADD COLUMN required_on_site_date TEXT;`);
+  } catch (e) {
+    // Ignore if column already exists
+  }
 }
 
 // Rename existing template if it exists

@@ -804,13 +804,13 @@ async function startServer() {
 
   app.post('/api/projects/:projectId/procurement', (req, res) => {
     const { projectId } = req.params;
-    const { item_name, expected_delivery_date, assigned_company } = req.body;
+    const { item_name, expected_delivery_date, required_on_site_date, assigned_company } = req.body;
     const id = crypto.randomUUID();
     
     db.prepare(`
-      INSERT INTO procurement_items (id, project_id, item_name, expected_delivery_date, assigned_company)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(id, projectId, item_name, expected_delivery_date, assigned_company);
+      INSERT INTO procurement_items (id, project_id, item_name, expected_delivery_date, required_on_site_date, assigned_company)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(id, projectId, item_name, expected_delivery_date, required_on_site_date, assigned_company);
 
     res.json({ id });
   });
