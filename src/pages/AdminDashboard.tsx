@@ -90,7 +90,7 @@ export default function AdminDashboard({ user }: { user: User }) {
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-wunder-dark bg-wunder-lime hover:bg-wunder-yellow transition-colors"
         >
           <Plus className="-ml-1 mr-2 h-5 w-5" />
-          New Requirement
+          New Submittal
         </button>
       </div>
 
@@ -294,7 +294,7 @@ export default function AdminDashboard({ user }: { user: User }) {
               <form onSubmit={handleCreateRequirement}>
                 <div>
                   <h3 className="text-lg leading-6 font-medium text-wunder-dark" id="modal-title">
-                    Create New Requirement
+                    Create New Submittal
                   </h3>
                   <div className="mt-4 space-y-4">
                     <div>

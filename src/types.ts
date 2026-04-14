@@ -150,6 +150,20 @@ export interface MilestoneDeliverable {
   created_at: string;
 }
 
+export interface MilestoneTemplate {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+}
+
+export interface MilestoneTemplateDeliverable {
+  id: string;
+  template_id: string;
+  description: string;
+  ball_in_court: string;
+}
+
 export interface PhotoFolder {
   id: string;
   project_id: string;
@@ -235,6 +249,7 @@ export interface ForumPost {
   user_name: string;
   title: string;
   content: string;
+  file_url?: string;
   created_at: string;
   reply_count?: number;
 }
@@ -245,5 +260,6 @@ export interface ForumReply {
   user_id: string;
   user_name: string;
   content: string;
+  file_url?: string;
   created_at: string;
 }

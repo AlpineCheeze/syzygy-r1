@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Project, Milestone, MilestoneRequirement, MilestoneDeliverable, MilestoneActivity } from '../types';
+import { User, Project, Milestone, MilestoneRequirement, MilestoneDeliverable, MilestoneActivity, MilestoneTemplate, MilestoneTemplateDeliverable } from '../types';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Plus, ChevronDown, ChevronRight, CheckCircle, Circle, Upload, File as FileIcon, Trash2, MoreVertical, Edit2 } from 'lucide-react';
+import { ArrowLeft, Plus, ChevronDown, ChevronRight, CheckCircle, Circle, Upload, File as FileIcon, Trash2, MoreVertical, Edit2, Copy, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Milestones({ user }: { user: User }) {
@@ -33,6 +33,14 @@ export default function Milestones({ user }: { user: User }) {
   const [isCreatingDeliv, setIsCreatingDeliv] = useState<string | null>(null);
   const [isEditingDeliv, setIsEditingDeliv] = useState<MilestoneDeliverable | null>(null);
   const [newDeliv, setNewDeliv] = useState({ description: '', ball_in_court: 'GC' });
+  const [templates, setTemplates] = useState<MilestoneTemplate[]>([]);
+  const [isManagingTemplates, setIsManagingTemplates] = useState(false);
+  const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
+  const [newTemplate, setNewTemplate] = useState({
+    name: '',
+    description: '',
+    deliverables: [] as { description: string, ball_in_court: string }[]
+  });
   const [deleteConfirm, setDeleteConfirm] = useState<{
     type: 'milestone' | 'deliverable';
     id: string;
@@ -67,10 +75,16 @@ export default function Milestones({ user }: { user: User }) {
     }
   };
 
+  const fetchTemplates = async () => {
+    const res = await fetch('/api/milestone-templates');
+    if (res.ok) setTemplates(await res.json());
+  };
+
   useEffect(() => {
     if (projectId) {
       fetchProject();
       fetchMilestones();
+      fetchTemplates();
     }
   }, [projectId]);
 
@@ -265,6 +279,58 @@ export default function Milestones({ user }: { user: User }) {
     }
   };
 
+  const handleApplyTemplate = async (templateId: string) => {
+    const res = await fetch(`/api/milestone-templates/${templateId}/deliverables`);
+    if (res.ok) {
+      const templateDelivs = await res.json();
+      setNewMilestone(prev => ({
+        ...prev,
+        deliverables: [
+          ...prev.deliverables,
+          ...templateDelivs.map((d: any) => ({ description: d.description, ball_in_court: d.ball_in_court }))
+        ]
+      }));
+    }
+  };
+
+  const handleCreateTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await fetch('/api/milestone-templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTemplate)
+    });
+
+    if (res.ok) {
+      setIsCreatingTemplate(false);
+      setNewTemplate({ name: '', description: '', deliverables: [] });
+      fetchTemplates();
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    const res = await fetch(`/api/milestone-templates/${id}`, { method: 'DELETE' });
+    if (res.ok) fetchTemplates();
+  };
+
+  const handleSaveAsTemplate = async (milestone: Milestone) => {
+    const delivs = deliverables[milestone.id] || [];
+    const res = await fetch('/api/milestone-templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: milestone.name,
+        description: `Template created from ${milestone.name}`,
+        deliverables: delivs.map(d => ({ description: d.description, ball_in_court: d.ball_in_court }))
+      })
+    });
+
+    if (res.ok) {
+      fetchTemplates();
+      alert('Milestone saved as template!');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED': return 'bg-wunder-lime text-wunder-dark';
@@ -296,13 +362,22 @@ export default function Milestones({ user }: { user: User }) {
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium text-wunder-dark">Construction Milestones</h3>
         {user.role === 'ADMIN' && (
-          <button
-            onClick={() => setIsCreatingMilestone(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-wunder-dark bg-wunder-lime hover:bg-wunder-yellow transition-colors"
-          >
-            <Plus className="-ml-1 mr-2 h-5 w-5" />
-            New Milestone
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsManagingTemplates(true)}
+              className="inline-flex items-center px-4 py-2 border border-wunder-border text-sm font-medium rounded-md shadow-sm text-wunder-dark bg-white hover:bg-wunder-light transition-colors"
+            >
+              <Settings className="-ml-1 mr-2 h-5 w-5" />
+              Manage Templates
+            </button>
+            <button
+              onClick={() => setIsCreatingMilestone(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-wunder-dark bg-wunder-lime hover:bg-wunder-yellow transition-colors"
+            >
+              <Plus className="-ml-1 mr-2 h-5 w-5" />
+              New Milestone
+            </button>
+          </div>
         )}
       </div>
 
@@ -370,6 +445,16 @@ export default function Milestones({ user }: { user: User }) {
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                               Rename
+                            </button>
+                            <button 
+                              onClick={() => {
+                                handleSaveAsTemplate(milestone);
+                                setActiveMilestoneMenu(null);
+                              }}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-wunder-dark hover:bg-wunder-light transition-colors"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                              Save as Template
                             </button>
                             <button 
                               onClick={() => {
@@ -602,6 +687,27 @@ export default function Milestones({ user }: { user: User }) {
                     </div>
 
                     <div>
+                      <label className="block text-sm font-medium text-wunder-gray">Apply Template (Optional)</label>
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleApplyTemplate(e.target.value);
+                            if (!newMilestone.name) {
+                              const template = templates.find(t => t.id === e.target.value);
+                              if (template) setNewMilestone(prev => ({ ...prev, name: template.name }));
+                            }
+                          }
+                        }}
+                        className="mt-1 block w-full border border-wunder-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-wunder-lime focus:border-wunder-lime sm:text-sm bg-wunder-light text-wunder-dark"
+                      >
+                        <option value="">Select a template...</option>
+                        {templates.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
                       <label className="block text-sm font-medium text-wunder-gray">Milestone Certificate</label>
                       <input 
                         type="file" 
@@ -825,6 +931,183 @@ export default function Milestones({ user }: { user: User }) {
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Templates Modal */}
+      {isManagingTemplates && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-wunder-dark/75 transition-opacity" onClick={() => setIsManagingTemplates(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+            <div className="relative inline-block align-bottom bg-wunder-light rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full sm:p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-wunder-dark">Milestone Templates</h3>
+                <button
+                  onClick={() => setIsCreatingTemplate(true)}
+                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-bold uppercase tracking-wider rounded-md shadow-sm text-wunder-dark bg-wunder-lime hover:bg-wunder-yellow transition-colors"
+                >
+                  <Plus className="-ml-1 mr-1.5 h-4 w-4" />
+                  New Template
+                </button>
+              </div>
+
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                {templates.map(template => (
+                  <div key={template.id} className="bg-white border border-wunder-border rounded-xl p-4 shadow-sm hover:border-wunder-gray transition-all">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="text-lg font-bold text-wunder-dark tracking-tight">{template.name}</h4>
+                        <p className="text-sm text-wunder-gray">{template.description}</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteTemplate(template.id)}
+                        className="p-2 text-wunder-gray hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 mt-4">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-wunder-gray bg-wunder-bg px-2 py-1 rounded">
+                        Created {format(new Date(template.created_at), 'MMM d, yyyy')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {templates.length === 0 && (
+                  <div className="text-center py-12 bg-wunder-bg rounded-xl border-2 border-dashed border-wunder-border">
+                    <p className="text-wunder-gray font-medium">No templates created yet.</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-8 flex justify-end">
+                <button
+                  onClick={() => setIsManagingTemplates(false)}
+                  className="px-6 py-2 border border-wunder-border rounded-md text-sm font-bold uppercase tracking-wider text-wunder-gray hover:bg-wunder-bg transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Template Modal */}
+      {isCreatingTemplate && (
+        <div className="fixed inset-0 z-20 overflow-y-auto">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-wunder-dark/75 transition-opacity" onClick={() => setIsCreatingTemplate(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+            <div className="relative inline-block align-bottom bg-wunder-light rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
+              <form onSubmit={handleCreateTemplate}>
+                <h3 className="text-xl font-bold text-wunder-dark mb-6">Create Milestone Template</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-wunder-gray uppercase tracking-wider mb-1">Template Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={newTemplate.name}
+                      onChange={e => setNewTemplate({ ...newTemplate, name: e.target.value })}
+                      className="block w-full border border-wunder-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-wunder-lime focus:border-wunder-lime sm:text-sm bg-white text-wunder-dark"
+                      placeholder="e.g., Standard Foundation Milestone"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-wunder-gray uppercase tracking-wider mb-1">Description</label>
+                    <textarea
+                      value={newTemplate.description}
+                      onChange={e => setNewTemplate({ ...newTemplate, description: e.target.value })}
+                      className="block w-full border border-wunder-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-wunder-lime focus:border-wunder-lime sm:text-sm bg-white text-wunder-dark"
+                      rows={2}
+                      placeholder="Briefly describe this template..."
+                    />
+                  </div>
+
+                  <div className="mt-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-sm font-bold text-wunder-gray uppercase tracking-wider">Template Deliverables</h4>
+                      <button
+                        type="button"
+                        onClick={() => setNewTemplate(prev => ({
+                          ...prev,
+                          deliverables: [...prev.deliverables, { description: '', ball_in_court: 'GC' }]
+                        }))}
+                        className="text-xs font-bold uppercase tracking-widest text-wunder-olive hover:text-wunder-dark transition-all bg-wunder-lime/10 px-3 py-1.5 rounded-full"
+                      >
+                        + Add Deliverable
+                      </button>
+                    </div>
+                    <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
+                      {newTemplate.deliverables.map((deliv, idx) => (
+                        <div key={idx} className="flex gap-3 items-start bg-wunder-bg p-3 rounded-lg border border-wunder-border">
+                          <div className="flex-1 space-y-2">
+                            <input
+                              type="text"
+                              required
+                              placeholder="Deliverable description"
+                              value={deliv.description}
+                              onChange={e => {
+                                const updated = [...newTemplate.deliverables];
+                                updated[idx].description = e.target.value;
+                                setNewTemplate({ ...newTemplate, deliverables: updated });
+                              }}
+                              className="block w-full border border-wunder-border rounded-md shadow-sm py-1.5 px-3 text-xs focus:outline-none focus:ring-wunder-lime focus:border-wunder-lime bg-white text-wunder-dark"
+                            />
+                            <select
+                              value={deliv.ball_in_court}
+                              onChange={e => {
+                                const updated = [...newTemplate.deliverables];
+                                updated[idx].ball_in_court = e.target.value;
+                                setNewTemplate({ ...newTemplate, deliverables: updated });
+                              }}
+                              className="block w-full border border-wunder-border rounded-md shadow-sm py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider focus:outline-none focus:ring-wunder-lime focus:border-wunder-lime bg-white text-wunder-dark"
+                            >
+                              <option value="GC">GC</option>
+                              <option value="SUBCONTRACTOR">Subcontractor</option>
+                              <option value="ARCHITECT">Architect</option>
+                              <option value="OWNER">Owner</option>
+                            </select>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = newTemplate.deliverables.filter((_, i) => i !== idx);
+                              setNewTemplate({ ...newTemplate, deliverables: updated });
+                            }}
+                            className="p-1.5 text-wunder-gray hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      {newTemplate.deliverables.length === 0 && (
+                        <p className="text-xs text-wunder-gray italic text-center py-4">No deliverables added to this template yet.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 flex gap-3">
+                  <button
+                    type="submit"
+                    className="flex-1 inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2.5 bg-wunder-lime text-sm font-bold uppercase tracking-wider text-wunder-dark hover:bg-wunder-yellow transition-colors"
+                  >
+                    Create Template
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingTemplate(false)}
+                    className="flex-1 inline-flex justify-center rounded-md border border-wunder-border shadow-sm px-4 py-2.5 bg-white text-sm font-bold uppercase tracking-wider text-wunder-gray hover:bg-wunder-bg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

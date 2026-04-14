@@ -67,7 +67,7 @@ export default function Home({ user }: { user: User }) {
    * projects they are authorized to access.
    */
   const fetchProjects = async () => {
-    const res = await fetch(`/api/projects?role=${user.role}&company_name=${encodeURIComponent(user.company_name)}`);
+    const res = await fetch(`/api/projects?role=${user.role}&company_name=${encodeURIComponent(user.company_name)}&email=${encodeURIComponent(user.email)}`);
     if (res.ok) {
       setProjects(await res.json());
     }

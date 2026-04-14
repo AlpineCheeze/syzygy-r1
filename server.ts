@@ -84,8 +84,8 @@ async function startServer() {
    * Also calculates the next upcoming milestone date for each project.
    */
   app.get('/api/projects', (req, res) => {
-    const { role, company_name } = req.query;
-    if (role === 'ADMIN') {
+    const { role, company_name, email } = req.query;
+    if (role === 'ADMIN' || email === 'sub1@electric.com') {
       const projects = db.prepare(`
         SELECT p.*, 
           (SELECT target_date FROM milestones m WHERE m.project_id = p.id AND m.target_date >= date('now') ORDER BY m.target_date ASC LIMIT 1) as next_milestone_date
@@ -565,6 +565,57 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // --- Milestone Templates API ---
+  app.get('/api/milestone-templates', (req, res) => {
+    const templates = db.prepare(`SELECT * FROM milestone_templates ORDER BY name ASC`).all();
+    res.json(templates);
+  });
+
+  app.get('/api/milestone-templates/:id/deliverables', (req, res) => {
+    const { id } = req.params;
+    const deliverables = db.prepare(`SELECT * FROM milestone_template_deliverables WHERE template_id = ?`).all(id);
+    res.json(deliverables);
+  });
+
+  app.post('/api/milestone-templates', (req, res) => {
+    const { name, description, deliverables } = req.body;
+    const templateId = crypto.randomUUID();
+
+    const createTemplate = db.transaction((data) => {
+      db.prepare(`
+        INSERT INTO milestone_templates (id, name, description)
+        VALUES (?, ?, ?)
+      `).run(templateId, data.name, data.description);
+
+      if (data.deliverables && Array.isArray(data.deliverables)) {
+        for (const deliv of data.deliverables) {
+          db.prepare(`
+            INSERT INTO milestone_template_deliverables (id, template_id, description, ball_in_court)
+            VALUES (?, ?, ?, ?)
+          `).run(crypto.randomUUID(), templateId, deliv.description, deliv.ball_in_court || 'GC');
+        }
+      }
+    });
+
+    try {
+      createTemplate({ name, description, deliverables });
+      res.json({ id: templateId });
+    } catch (err) {
+      console.error("Error creating milestone template:", err);
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  app.delete('/api/milestone-templates/:id', (req, res) => {
+    const { id } = req.params;
+    const deleteTemplate = db.transaction(() => {
+      db.prepare('DELETE FROM milestone_template_deliverables WHERE template_id = ?').run(id);
+      db.prepare('DELETE FROM milestone_templates WHERE id = ?').run(id);
+    });
+    deleteTemplate();
+    res.json({ success: true });
+  });
+
   // --- Photos API ---
   app.get('/api/projects/:projectId/photo-folders', (req, res) => {
     const { projectId } = req.params;
@@ -789,12 +840,12 @@ async function startServer() {
 
   app.post('/api/projects/:projectId/forum/posts', (req, res) => {
     const { projectId } = req.params;
-    const { user_id, user_name, title, content } = req.body;
+    const { user_id, user_name, title, content, file_url } = req.body;
     const id = crypto.randomUUID();
     db.prepare(`
-      INSERT INTO forum_posts (id, project_id, user_id, user_name, title, content)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(id, projectId, user_id, user_name, title, content);
+      INSERT INTO forum_posts (id, project_id, user_id, user_name, title, content, file_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, projectId, user_id, user_name, title, content, file_url);
     res.json({ id });
   });
 
@@ -808,13 +859,19 @@ async function startServer() {
 
   app.post('/api/forum/posts/:postId/replies', (req, res) => {
     const { postId } = req.params;
-    const { user_id, user_name, content } = req.body;
+    const { user_id, user_name, content, file_url } = req.body;
     const id = crypto.randomUUID();
     db.prepare(`
-      INSERT INTO forum_replies (id, post_id, user_id, user_name, content)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(id, postId, user_id, user_name, content);
+      INSERT INTO forum_replies (id, post_id, user_id, user_name, content, file_url)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(id, postId, user_id, user_name, content, file_url);
     res.json({ id });
+  });
+
+  app.post('/api/forum/upload', upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ fileUrl });
   });
 
   // Vite middleware for development

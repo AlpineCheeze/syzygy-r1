@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Project, ForumPost, ForumReply } from '../types';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MessageCircle, Send, Plus, User as UserIcon, Clock, MessageSquare } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Send, Plus, User as UserIcon, Clock, MessageSquare, Paperclip, FileText, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Forum({ user }: { user: User }) {
@@ -14,6 +14,11 @@ export default function Forum({ user }: { user: User }) {
   
   const [newPost, setNewPost] = useState({ title: '', content: '' });
   const [newReply, setNewReply] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [postFile, setPostFile] = useState<string | null>(null);
+  const [replyFile, setReplyFile] = useState<string | null>(null);
+  const postFileInputRef = useRef<HTMLInputElement>(null);
+  const replyFileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchProject = async () => {
     const res = await fetch(`/api/projects/${projectId}`);
@@ -43,6 +48,28 @@ export default function Forum({ user }: { user: User }) {
     }
   }, [selectedPost]);
 
+  const handleFileUpload = async (file: File) => {
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/forum/upload', {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const { fileUrl } = await res.json();
+        return fileUrl;
+      }
+    } catch (err) {
+      console.error('Upload failed', err);
+    } finally {
+      setUploading(false);
+    }
+    return null;
+  };
+
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     const res = await fetch(`/api/projects/${projectId}/forum/posts`, {
@@ -51,20 +78,22 @@ export default function Forum({ user }: { user: User }) {
       body: JSON.stringify({
         ...newPost,
         user_id: user.id,
-        user_name: user.name
+        user_name: user.name,
+        file_url: postFile
       })
     });
 
     if (res.ok) {
       setIsCreatingPost(false);
       setNewPost({ title: '', content: '' });
+      setPostFile(null);
       fetchPosts();
     }
   };
 
   const handleCreateReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPost || !newReply.trim()) return;
+    if (!selectedPost || (!newReply.trim() && !replyFile)) return;
 
     const res = await fetch(`/api/forum/posts/${selectedPost.id}/replies`, {
       method: 'POST',
@@ -72,12 +101,14 @@ export default function Forum({ user }: { user: User }) {
       body: JSON.stringify({
         content: newReply,
         user_id: user.id,
-        user_name: user.name
+        user_name: user.name,
+        file_url: replyFile
       })
     });
 
     if (res.ok) {
       setNewReply('');
+      setReplyFile(null);
       fetchReplies(selectedPost.id);
       fetchPosts(); // Update reply count in list
     }
@@ -176,6 +207,41 @@ export default function Forum({ user }: { user: User }) {
                     placeholder="Share your thoughts, questions, or updates..."
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-wunder-gray uppercase tracking-widest mb-1.5">Attachment (Optional)</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      className="hidden"
+                      ref={postFileInputRef}
+                      onChange={async (e) => {
+                        if (e.target.files?.[0]) {
+                          const url = await handleFileUpload(e.target.files[0]);
+                          setPostFile(url);
+                        }
+                      }}
+                    />
+                    {postFile ? (
+                      <div className="flex items-center gap-2 bg-wunder-bg px-4 py-2 rounded-xl border border-wunder-border">
+                        <FileText className="h-4 w-4 text-wunder-olive" />
+                        <span className="text-sm text-wunder-dark truncate max-w-[200px]">File Attached</span>
+                        <button type="button" onClick={() => setPostFile(null)} className="text-red-500 hover:text-red-700">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={uploading}
+                        onClick={() => postFileInputRef.current?.click()}
+                        className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-wunder-border rounded-xl text-wunder-gray hover:border-wunder-olive hover:text-wunder-olive transition-colors"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                        <span className="text-sm font-bold">{uploading ? 'Uploading...' : 'Attach File'}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div className="flex justify-end gap-3 pt-2">
                   <button
                     type="button"
@@ -213,6 +279,19 @@ export default function Forum({ user }: { user: User }) {
                 <div className="text-wunder-dark leading-relaxed whitespace-pre-wrap pl-13">
                   {selectedPost.content}
                 </div>
+                {selectedPost.file_url && (
+                  <div className="mt-4 pl-13">
+                    <a 
+                      href={selectedPost.file_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-wunder-border rounded-xl text-sm font-bold text-wunder-olive hover:bg-wunder-bg transition-colors"
+                    >
+                      <FileText className="h-4 w-4" />
+                      View Attachment
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* Replies List */}
@@ -232,6 +311,19 @@ export default function Forum({ user }: { user: User }) {
                           <span className="text-[10px] text-wunder-gray">{format(new Date(reply.created_at), 'MMM d, HH:mm')}</span>
                         </div>
                         <p className="text-sm text-wunder-dark leading-relaxed">{reply.content}</p>
+                        {reply.file_url && (
+                          <div className="mt-2">
+                            <a 
+                              href={reply.file_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 text-xs font-bold text-wunder-olive hover:text-wunder-dark transition-colors"
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              View Attachment
+                            </a>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -244,8 +336,36 @@ export default function Forum({ user }: { user: User }) {
               </div>
 
               {/* Reply Input */}
-              <div className="p-4 border-t-2 border-wunder-border bg-wunder-light/30">
+              <div className="p-4 border-t-2 border-wunder-border bg-wunder-light/30 space-y-3">
+                {replyFile && (
+                  <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-wunder-border w-fit">
+                    <FileText className="h-3 w-3 text-wunder-olive" />
+                    <span className="text-xs text-wunder-dark">File Attached</span>
+                    <button onClick={() => setReplyFile(null)} className="text-red-500">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
                 <form onSubmit={handleCreateReply} className="flex gap-3">
+                  <input
+                    type="file"
+                    className="hidden"
+                    ref={replyFileInputRef}
+                    onChange={async (e) => {
+                      if (e.target.files?.[0]) {
+                        const url = await handleFileUpload(e.target.files[0]);
+                        setReplyFile(url);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => replyFileInputRef.current?.click()}
+                    className="w-11 h-11 bg-white border-2 border-wunder-border rounded-full flex items-center justify-center text-wunder-gray hover:border-wunder-olive hover:text-wunder-olive transition-colors disabled:opacity-50"
+                  >
+                    <Paperclip className="h-5 w-5" />
+                  </button>
                   <input
                     type="text"
                     value={newReply}
@@ -255,7 +375,7 @@ export default function Forum({ user }: { user: User }) {
                   />
                   <button
                     type="submit"
-                    disabled={!newReply.trim()}
+                    disabled={!newReply.trim() && !replyFile}
                     className="w-11 h-11 bg-wunder-olive text-white rounded-full flex items-center justify-center hover:bg-wunder-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                   >
                     <Send className="h-5 w-5" />

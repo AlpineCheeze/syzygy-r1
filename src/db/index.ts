@@ -193,6 +193,20 @@ if (!hasMilestoneDeliverables) {
       status TEXT CHECK(status IN ('PENDING', 'IN_REVIEW', 'APPROVED', 'REJECTED')) DEFAULT 'PENDING',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE milestone_templates (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      description TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE milestone_template_deliverables (
+      id TEXT PRIMARY KEY,
+      template_id TEXT REFERENCES milestone_templates(id),
+      description TEXT,
+      ball_in_court TEXT
+    );
   `);
 } else {
   try {
@@ -200,6 +214,25 @@ if (!hasMilestoneDeliverables) {
   } catch (e) {
     // Ignore if column already exists
   }
+}
+
+// Migration for milestone templates
+const hasMilestoneTemplates = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='milestone_templates'").get();
+if (!hasMilestoneTemplates) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS milestone_templates (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      description TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS milestone_template_deliverables (
+      id TEXT PRIMARY KEY,
+      template_id TEXT REFERENCES milestone_templates(id),
+      description TEXT,
+      ball_in_court TEXT
+    );
+  `);
 }
 
 // Migration for inspection templates and ball in court
@@ -333,6 +366,7 @@ if (!hasForum) {
       user_name TEXT,
       title TEXT,
       content TEXT,
+      file_url TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE forum_replies (
@@ -341,9 +375,17 @@ if (!hasForum) {
       user_id TEXT,
       user_name TEXT,
       content TEXT,
+      file_url TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
   `);
+} else {
+  try {
+    db.exec(`ALTER TABLE forum_posts ADD COLUMN file_url TEXT;`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE forum_replies ADD COLUMN file_url TEXT;`);
+  } catch (e) {}
 }
 
 // Migration for drawings
