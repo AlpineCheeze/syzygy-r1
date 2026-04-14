@@ -458,6 +458,28 @@ if (!hasProcurement) {
   }
 }
 
+// Migration for warranty
+const hasWarranty = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='warranty_items'").get();
+if (!hasWarranty) {
+  db.exec(`
+    CREATE TABLE warranty_items (
+      id TEXT PRIMARY KEY,
+      project_id TEXT REFERENCES projects(id),
+      title TEXT,
+      description TEXT,
+      issue_photo_url TEXT,
+      status TEXT CHECK(status IN ('OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED')) DEFAULT 'OPEN',
+      assigned_company TEXT,
+      solution_photo_url TEXT,
+      solution_comment TEXT,
+      created_by TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      resolved_at TEXT,
+      closed_at TEXT
+    );
+  `);
+}
+
 // Rename existing template if it exists
 try {
   db.prepare("UPDATE inspection_templates SET name = 'Construction Observations' WHERE name = 'Safety Observation'").run();

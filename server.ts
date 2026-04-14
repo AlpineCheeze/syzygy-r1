@@ -826,6 +826,59 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // --- Warranty API ---
+  app.get('/api/projects/:projectId/warranty', (req, res) => {
+    const { projectId } = req.params;
+    const { company_name } = req.query;
+    let query = `SELECT * FROM warranty_items WHERE project_id = ?`;
+    let params: any[] = [projectId];
+
+    if (company_name) {
+      query += ` AND assigned_company = ?`;
+      params.push(company_name);
+    }
+    query += ` ORDER BY created_at DESC`;
+
+    const items = db.prepare(query).all(...params);
+    res.json(items);
+  });
+
+  app.post('/api/projects/:projectId/warranty', upload.single('file'), (req, res) => {
+    const { projectId } = req.params;
+    const { title, description, assigned_company, created_by } = req.body;
+    const id = crypto.randomUUID();
+    const issue_photo_url = req.file ? `/uploads/${req.file.filename}` : null;
+    
+    db.prepare(`
+      INSERT INTO warranty_items (id, project_id, title, description, assigned_company, created_by, issue_photo_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, projectId, title, description, assigned_company, created_by, issue_photo_url);
+
+    res.json({ id });
+  });
+
+  app.put('/api/warranty/:id/resolve', upload.single('file'), (req, res) => {
+    const { id } = req.params;
+    const { solution_comment } = req.body;
+    const solution_photo_url = req.file ? `/uploads/${req.file.filename}` : null;
+    
+    db.prepare(`
+      UPDATE warranty_items 
+      SET status = 'RESOLVED', solution_photo_url = ?, solution_comment = ?, resolved_at = CURRENT_TIMESTAMP 
+      WHERE id = ?
+    `).run(solution_photo_url, solution_comment, id);
+
+    res.json({ success: true });
+  });
+
+  app.put('/api/warranty/:id/close', (req, res) => {
+    const { id } = req.params;
+    db.prepare(`
+      UPDATE warranty_items SET status = 'CLOSED', closed_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(id);
+    res.json({ success: true });
+  });
+
   // --- Forum API ---
   app.get('/api/projects/:projectId/forum/posts', (req, res) => {
     const { projectId } = req.params;

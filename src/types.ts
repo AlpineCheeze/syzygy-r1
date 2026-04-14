@@ -202,6 +202,22 @@ export interface ProcurementItem {
   created_at: string;
 }
 
+export interface WarrantyItem {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  issue_photo_url: string | null;
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+  assigned_company: string;
+  solution_photo_url: string | null;
+  solution_comment: string | null;
+  created_by: string;
+  created_at: string;
+  resolved_at: string | null;
+  closed_at: string | null;
+}
+
 export interface Contact {
   id: string;
   project_id: string;
