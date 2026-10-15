@@ -879,6 +879,41 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // --- Meetings API ---
+  app.get('/api/projects/:projectId/meetings', (req, res) => {
+    const { projectId } = req.params;
+    const meetings = db.prepare('SELECT * FROM meetings WHERE project_id = ? ORDER BY date DESC').all(projectId);
+    res.json(meetings);
+  });
+
+  app.post('/api/projects/:projectId/meetings', (req, res) => {
+    const { projectId } = req.params;
+    const { title, date, location, agenda, created_by } = req.body;
+    const id = crypto.randomUUID();
+    db.prepare(`
+      INSERT INTO meetings (id, project_id, title, date, location, agenda, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, projectId, title, date, location, agenda, created_by);
+    res.json({ id });
+  });
+
+  app.put('/api/meetings/:id', (req, res) => {
+    const { id } = req.params;
+    const { title, date, location, agenda, minutes } = req.body;
+    db.prepare(`
+      UPDATE meetings 
+      SET title = ?, date = ?, location = ?, agenda = ?, minutes = ?
+      WHERE id = ?
+    `).run(title, date, location, agenda, minutes, id);
+    res.json({ success: true });
+  });
+
+  app.delete('/api/meetings/:id', (req, res) => {
+    const { id } = req.params;
+    db.prepare('DELETE FROM meetings WHERE id = ?').run(id);
+    res.json({ success: true });
+  });
+
   // --- Forum API ---
   app.get('/api/projects/:projectId/forum/posts', (req, res) => {
     const { projectId } = req.params;
@@ -891,15 +926,71 @@ async function startServer() {
     res.json(posts);
   });
 
+  // --- Distribution Groups API ---
+  app.get('/api/projects/:projectId/distribution-groups', (req, res) => {
+    const { projectId } = req.params;
+    const groups = db.prepare(`
+      SELECT g.*, (SELECT COUNT(*) FROM distribution_group_members WHERE group_id = g.id) as member_count
+      FROM distribution_groups g
+      WHERE project_id = ?
+      ORDER BY name ASC
+    `).all(projectId);
+    res.json(groups);
+  });
+
+  app.post('/api/projects/:projectId/distribution-groups', (req, res) => {
+    const { projectId } = req.params;
+    const { name, description } = req.body;
+    const id = crypto.randomUUID();
+    db.prepare('INSERT INTO distribution_groups (id, project_id, name, description) VALUES (?, ?, ?, ?)').run(id, projectId, name, description);
+    res.json({ id });
+  });
+
+  app.get('/api/distribution-groups/:id/members', (req, res) => {
+    const { id } = req.params;
+    const members = db.prepare('SELECT user_id FROM distribution_group_members WHERE group_id = ?').all(id);
+    res.json(members);
+  });
+
+  app.post('/api/distribution-groups/:id/members', (req, res) => {
+    const { id } = req.params;
+    const { userIds } = req.body; // Expecting an array
+    const insert = db.prepare('INSERT OR IGNORE INTO distribution_group_members (group_id, user_id) VALUES (?, ?)');
+    const transaction = db.transaction((ids: string[]) => {
+      for (const userId of ids) insert.run(id, userId);
+    });
+    transaction(userIds);
+    res.json({ success: true });
+  });
+
+  app.delete('/api/distribution-groups/:id/members/:userId', (req, res) => {
+    const { id, userId } = req.params;
+    db.prepare('DELETE FROM distribution_group_members WHERE group_id = ? AND user_id = ?').run(id, userId);
+    res.json({ success: true });
+  });
+
+  app.delete('/api/distribution-groups/:id', (req, res) => {
+    const { id } = req.params;
+    db.prepare('DELETE FROM distribution_groups WHERE id = ?').run(id);
+    res.json({ success: true });
+  });
+
   app.post('/api/projects/:projectId/forum/posts', (req, res) => {
     const { projectId } = req.params;
-    const { user_id, user_name, title, content, file_url } = req.body;
+    const { user_id, user_name, title, content, file_url, type, status } = req.body;
     const id = crypto.randomUUID();
     db.prepare(`
-      INSERT INTO forum_posts (id, project_id, user_id, user_name, title, content, file_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, projectId, user_id, user_name, title, content, file_url);
+      INSERT INTO forum_posts (id, project_id, user_id, user_name, title, content, file_url, type, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, projectId, user_id, user_name, title, content, file_url, type || 'DISCUSSION', status || 'OPEN');
     res.json({ id });
+  });
+
+  app.put('/api/forum/posts/:id/status', (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    db.prepare('UPDATE forum_posts SET status = ? WHERE id = ?').run(status, id);
+    res.json({ success: true });
   });
 
   app.get('/api/forum/posts/:postId/replies', (req, res) => {

@@ -17,7 +17,7 @@ import Milestones from './pages/Milestones';
 import Photos from './pages/Photos';
 import Drawings from './pages/Drawings';
 import Directory from './pages/Directory';
-import RFIs from './pages/RFIs';
+import Meetings from './pages/Meetings';
 import Warranty from './pages/Warranty';
 import Schedule from './pages/Schedule';
 import Procurement from './pages/Procurement';
@@ -129,8 +129,8 @@ export default function App() {
               <Route path="/projects/:projectId/directory" element={
                 hasPermission(user, 'directory', 'VIEWER') ? <Directory user={user} /> : <Navigate to="/" replace />
               } />
-              <Route path="/projects/:projectId/rfis" element={
-                hasPermission(user, 'rfis', 'VIEWER') ? <RFIs user={user} /> : <Navigate to="/" replace />
+              <Route path="/projects/:projectId/meetings" element={
+                hasPermission(user, 'meetings', 'VIEWER') ? <Meetings user={user} /> : <Navigate to="/" replace />
               } />
               <Route path="/projects/:projectId/warranty" element={
                 hasPermission(user, 'warranty', 'VIEWER') ? <Warranty user={user} /> : <Navigate to="/" replace />

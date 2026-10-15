@@ -133,11 +133,11 @@ export default function ProjectDashboard({ user }: { user: User }) {
       bgColor: 'bg-wunder-lime'
     },
     {
-      key: 'rfis' as keyof ToolPermissions,
-      name: 'RFIs',
-      description: 'Manage Requests for Information and track responses.',
-      icon: MessageSquare,
-      href: `/projects/${projectId}/rfis`,
+      key: 'meetings' as keyof ToolPermissions,
+      name: 'Meetings',
+      description: 'Create meeting agendas and document meeting minutes.',
+      icon: Users,
+      href: `/projects/${projectId}/meetings`,
       color: 'text-wunder-dark',
       bgColor: 'bg-wunder-lime'
     },

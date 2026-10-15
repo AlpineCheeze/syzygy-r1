@@ -367,6 +367,8 @@ if (!hasForum) {
       title TEXT,
       content TEXT,
       file_url TEXT,
+      type TEXT CHECK(type IN ('DISCUSSION', 'RFI', 'CHANGE_ORDER')) DEFAULT 'DISCUSSION',
+      status TEXT CHECK(status IN ('OPEN', 'RESOLVED', 'CLOSED')) DEFAULT 'OPEN',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE forum_replies (
@@ -386,6 +388,48 @@ if (!hasForum) {
   try {
     db.exec(`ALTER TABLE forum_replies ADD COLUMN file_url TEXT;`);
   } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE forum_posts ADD COLUMN type TEXT CHECK(type IN ('DISCUSSION', 'RFI', 'CHANGE_ORDER')) DEFAULT 'DISCUSSION';`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE forum_posts ADD COLUMN status TEXT CHECK(status IN ('OPEN', 'RESOLVED', 'CLOSED')) DEFAULT 'OPEN';`);
+  } catch (e) {}
+
+  // Update constraint for forum_posts type if it's missing CHANGE_ORDER
+  const forumPostsSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='forum_posts'").get() as { sql: string };
+  if (forumPostsSql && !forumPostsSql.sql.includes("'CHANGE_ORDER'")) {
+    db.exec(`
+      PRAGMA foreign_keys=off;
+      BEGIN TRANSACTION;
+      CREATE TABLE forum_posts_new (
+        id TEXT PRIMARY KEY,
+        project_id TEXT REFERENCES projects(id),
+        user_id TEXT,
+        user_name TEXT,
+        title TEXT,
+        content TEXT,
+        file_url TEXT,
+        type TEXT CHECK(type IN ('DISCUSSION', 'RFI', 'CHANGE_ORDER')) DEFAULT 'DISCUSSION',
+        status TEXT CHECK(status IN ('OPEN', 'RESOLVED', 'CLOSED')) DEFAULT 'OPEN',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+      INSERT INTO forum_posts_new SELECT id, project_id, user_id, user_name, title, content, file_url, type, status, created_at FROM forum_posts;
+      DROP TABLE forum_posts;
+      ALTER TABLE forum_posts_new RENAME TO forum_posts;
+      COMMIT;
+      PRAGMA foreign_keys=on;
+    `);
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS forum_mentions (
+      id TEXT PRIMARY KEY,
+      post_id TEXT REFERENCES forum_posts(id),
+      reply_id TEXT REFERENCES forum_replies(id),
+      mention_type TEXT CHECK(mention_type IN ('USER', 'GROUP')),
+      target_id TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
 }
 
 // Migration for drawings
@@ -476,6 +520,43 @@ if (!hasWarranty) {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       resolved_at TEXT,
       closed_at TEXT
+    );
+  `);
+}
+
+// Migration for meetings
+const hasMeetings = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='meetings'").get();
+if (!hasMeetings) {
+  db.exec(`
+    CREATE TABLE meetings (
+      id TEXT PRIMARY KEY,
+      project_id TEXT REFERENCES projects(id),
+      title TEXT,
+      date TEXT,
+      location TEXT,
+      agenda TEXT,
+      minutes TEXT,
+      created_by TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
+
+// Migration for distribution groups
+const hasGroups = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='distribution_groups'").get();
+if (!hasGroups) {
+  db.exec(`
+    CREATE TABLE distribution_groups (
+      id TEXT PRIMARY KEY,
+      project_id TEXT REFERENCES projects(id),
+      name TEXT NOT NULL,
+      description TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE distribution_group_members (
+      group_id TEXT REFERENCES distribution_groups(id) ON DELETE CASCADE,
+      user_id TEXT,
+      PRIMARY KEY (group_id, user_id)
     );
   `);
 }

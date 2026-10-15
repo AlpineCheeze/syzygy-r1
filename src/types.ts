@@ -23,7 +23,7 @@ export interface ToolPermissions {
   milestones: PermissionLevel;
   photos: PermissionLevel;
   drawings: PermissionLevel;
-  rfis: PermissionLevel;
+  meetings: PermissionLevel;
   warranty: PermissionLevel;
   schedule: PermissionLevel;
   procurement: PermissionLevel;
@@ -218,6 +218,18 @@ export interface WarrantyItem {
   closed_at: string | null;
 }
 
+export interface Meeting {
+  id: string;
+  project_id: string;
+  title: string;
+  date: string;
+  location: string;
+  agenda: string;
+  minutes: string;
+  created_by: string;
+  created_at: string;
+}
+
 export interface Contact {
   id: string;
   project_id: string;
@@ -259,6 +271,20 @@ export interface Submittal {
   target_due_date: string;
 }
 
+export interface DistributionGroup {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  member_count?: number;
+}
+
+export interface DistributionGroupMember {
+  group_id: string;
+  user_id: string;
+}
+
 export interface ForumPost {
   id: string;
   project_id: string;
@@ -267,6 +293,8 @@ export interface ForumPost {
   title: string;
   content: string;
   file_url?: string;
+  type: 'DISCUSSION' | 'RFI' | 'CHANGE_ORDER';
+  status: 'OPEN' | 'RESOLVED' | 'CLOSED';
   created_at: string;
   reply_count?: number;
 }
@@ -278,5 +306,14 @@ export interface ForumReply {
   user_name: string;
   content: string;
   file_url?: string;
+  created_at: string;
+}
+
+export interface ForumMention {
+  id: string;
+  post_id?: string;
+  reply_id?: string;
+  mention_type: 'USER' | 'GROUP';
+  target_id: string;
   created_at: string;
 }
